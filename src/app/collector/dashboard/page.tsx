@@ -23,8 +23,18 @@ import {
   Navigation,
   AlertCircle,
   RefreshCw,
+  Filter,
+  Package,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import Image from "next/image";
 
 export default function CollectorDashboard() {
@@ -33,6 +43,7 @@ export default function CollectorDashboard() {
   const [myJobs, setMyJobs] = useState<ScrapItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
 
   // --- Store & Geo ---
   const {
@@ -41,9 +52,11 @@ export default function CollectorDashboard() {
     setCurrentLocation,
     radiusFilterEnabled,
     setRadiusFilterEnabled,
+    customRadius,
+    setCustomRadius,
   } = useMapStore();
 
-  const operatingRadius = 15; // Default radius (km)
+  const operatingRadius = customRadius || 15; // Use store radius or default (km)
 
   // --- 1. Data Fetching ---
   const loadData = useCallback(async () => {
@@ -116,8 +129,14 @@ export default function CollectorDashboard() {
   const reservedJobs = myJobs.filter((j) => j.status === "RESERVED");
   const completedJobs = myJobs.filter((j) => j.status === "COLLECTED");
 
-  // Filter map items by radius (if enabled and we have location)
+  // Filter map items by radius and type
   const mapDisplayItems = activeListings.filter((item) => {
+    // 1. Waste Type Filter
+    if (selectedTypes.length > 0 && !selectedTypes.includes(item.wasteType)) {
+      return false;
+    }
+
+    // 2. Radius Filter
     if (!radiusFilterEnabled || !currentLatitude || !currentLongitude)
       return true;
 
@@ -136,6 +155,12 @@ export default function CollectorDashboard() {
 
     return distance <= operatingRadius;
   });
+
+  const toggleType = (type: string) => {
+    setSelectedTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
+    );
+  };
 
   // --- 4. Actions ---
   const handleAcceptPickup = async (id: string, eta: number) => {
@@ -269,16 +294,114 @@ export default function CollectorDashboard() {
               />
             </div>
             {/* Map Overlay Controls */}
-            <div className="absolute top-4 right-4 z-10 bg-white/90 p-2 rounded-lg shadow-md backdrop-blur-sm">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={radiusFilterEnabled}
-                  onChange={(e) => setRadiusFilterEnabled(e.target.checked)}
-                  className="rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                <span>Limit to {operatingRadius}km</span>
-              </label>
+            <div className="absolute top-4 right-4 z-10">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-10 w-10 rounded-full shadow-lg backdrop-blur-sm bg-white/90"
+                  >
+                    <Filter className="h-5 w-5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 rounded-3xl p-5 shadow-2xl border-none bg-white/95 backdrop-blur-md" align="end" sideOffset={8}>
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2 border-b pb-3">
+                      <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                        <Filter className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-base leading-none">Map Filters</h4>
+                        <p className="text-[12px] text-muted-foreground mt-1">
+                          Refine your search results
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-5">
+                      {/* Radius Section */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="radius-filter" className="flex flex-col gap-0.5 cursor-pointer">
+                            <span className="font-semibold text-sm">Proximity Filter</span>
+                            <span className="text-[11px] font-normal text-muted-foreground">
+                              Show items near you
+                            </span>
+                          </Label>
+                          <Switch
+                            id="radius-filter"
+                            checked={radiusFilterEnabled}
+                            onCheckedChange={setRadiusFilterEnabled}
+                            className="data-[state=checked]:bg-primary"
+                          />
+                        </div>
+
+                        {radiusFilterEnabled && (
+                          <div className="space-y-4 rounded-2xl bg-slate-50 p-3.5 border border-slate-100">
+                            <div className="flex justify-between items-end">
+                              <span className="text-[12px] text-muted-foreground font-medium uppercase tracking-wider">Search Distance</span>
+                              <span className="font-bold text-lg text-primary leading-none">{operatingRadius}<span className="text-xs ml-1 text-primary/70">km</span></span>
+                            </div>
+                            <Slider
+                              defaultValue={[operatingRadius]}
+                              max={50}
+                              min={1}
+                              step={1}
+                              onValueChange={(vals) => setCustomRadius(vals[0])}
+                              className="py-2"
+                            />
+                            <div className="flex justify-between text-[10px] text-slate-400 font-medium">
+                              <span>1km</span>
+                              <span>25km</span>
+                              <span>50km</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Categories Section */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-semibold flex items-center gap-2 text-slate-700">
+                          <Package className="h-4 w-4 text-slate-400" />
+                          Waste Categories
+                        </Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {Object.entries(WASTE_TYPE_CONFIG).map(([type, config]) => {
+                            const isSelected = selectedTypes.includes(type);
+                            return (
+                              <button
+                                key={type}
+                                onClick={() => toggleType(type)}
+                                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                                  isSelected 
+                                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-[1.02]" 
+                                    : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-100"
+                                }`}
+                              >
+                                {isSelected ? (
+                                  <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                                ) : (
+                                  <div className={`h-1.5 w-1.5 rounded-full ${config.bgColor.replace('bg-', 'bg-').replace('100', '400')}`} />
+                                )}
+                                {config.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {selectedTypes.length > 0 && (
+                          <button 
+                            onClick={() => setSelectedTypes([])}
+                            className="text-[11px] text-primary hover:underline font-medium pt-1"
+                          >
+                            Reset categories
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </TabsContent>
 

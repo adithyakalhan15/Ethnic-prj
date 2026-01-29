@@ -20,11 +20,12 @@ import {
   Loader2,
   Plus,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
 import { CreateListingDialog } from "@/components/listings/CreateListingDialog";
+import { Calendar } from "lucide-react";
 
 export default function SellerDashboard() {
   const [listings, setListings] = useState<ScrapItem[]>([]);
@@ -194,14 +195,22 @@ function ListingGrid({ items, type, onDispute }: any) {
           <CardContent>
             {type === "RESERVED" && (
               <div className="space-y-3">
-                <div className="bg-orange-50 text-orange-700 text-xs p-2 rounded flex items-center gap-2">
-                  <Clock className="h-3 w-3" />
-                  Pickup:{" "}
-                  {item.pickupTime
-                    ? formatDistanceToNow(new Date(item.pickupTime), {
-                        addSuffix: true,
-                      })
-                    : "Soon"}
+                <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                      <Calendar className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Scheduled For</p>
+                      <p className="text-sm font-bold text-slate-700">
+                        {item.pickupTime ? format(new Date(item.pickupTime), "MMM do, h:mm a") : "TBD"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] font-medium text-primary bg-primary/10 w-fit px-2 py-0.5 rounded-full">
+                    <Clock className="h-3 w-3" />
+                    {item.pickupTime ? formatDistanceToNow(new Date(item.pickupTime), { addSuffix: true }) : "Calculating..."}
+                  </div>
                 </div>
                 <Button
                   variant="destructive"
