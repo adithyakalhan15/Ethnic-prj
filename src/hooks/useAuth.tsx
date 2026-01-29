@@ -24,8 +24,11 @@ interface AuthContextType {
     password: string,
     fullName: string,
     role: UserRole,
-  ) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  ) => Promise<{ error: any; profile: Profile | null }>;
+  signIn: (
+    email: string,
+    password: string,
+  ) => Promise<{ error: any; profile: Profile | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
 }
@@ -41,6 +44,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Initialize Supabase Client
   const supabase = createClient();
+
+  const mapProfile = (data: any): Profile => {
+    return {
+      id: data.id,
+      email: data.email,
+      fullName: data.full_name ?? data.fullName ?? null,
+      role: data.role,
+      phone: data.phone ?? null,
+      avatarUrl: data.avatar_url ?? data.avatarUrl ?? null,
+      vehicleType: data.vehicle_type ?? data.vehicleType ?? null,
+      plateNumber: data.license_plate ?? data.plateNumber ?? null,
+      operatingRadius: data.operating_radius ?? data.operatingRadius ?? null,
+      createdAt: data.created_at ?? data.createdAt,
+      updatedAt: data.updated_at ?? data.updatedAt,
+    };
+  };
 
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -64,43 +83,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return mappedProfile;
     }
     return null;
+    return null;
   };
 
   useEffect(() => {
-    // Initial Session Check
-    supabase.auth.getSession()
-      .then(({ data: { session }, error }) => {
+    const initAuth = async () => {
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+
         if (error) {
           console.warn("Auth session error:", error.message);
-          // If the session is invalid, clear it
-          supabase.auth.signOut();
+          await supabase.auth.signOut();
           setSession(null);
           setUser(null);
           setLoading(false);
           return;
         }
+
         setSession(session);
         setUser(session?.user ?? null);
+
         if (session?.user) {
-          fetchProfile(session.user.id);
+          await fetchProfile(session.user.id);
         }
-        setLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error("Auth initialization failed:", err);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    initAuth();
 
     // Real-time Auth Listener
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        // If we have a user but no profile yet, fetch it
-        fetchProfile(session.user.id);
+        await fetchProfile(session.user.id);
       } else {
         setProfile(null);
       }
@@ -116,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fullName: string,
     role: UserRole,
   ) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -126,32 +152,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       },
     });
-    return { error };
+
+    let userProfile = null;
+    if (!error && data.user) {
+      userProfile = await fetchProfile(data.user.id);
+    }
+
+    return { error, profile: userProfile };
   };
 
-  // --- UPDATED SIGN IN LOGIC ---
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
+    let userProfile = null;
     if (!error && data.user) {
-      // 1. Fetch the profile immediately to check the role
-      const userProfile = await fetchProfile(data.user.id);
-
-      // 2. Redirect based on Role
-      if (userProfile) {
-        if (userProfile.role === "COLLECTOR") {
-          router.push("/collector/dashboard");
-        } else {
-          router.push("/seller/dashboard");
-        }
-        router.refresh();
-      }
+      userProfile = await fetchProfile(data.user.id);
     }
 
-    return { error };
+    return { error, profile: userProfile };
   };
 
   const signOut = async () => {
@@ -218,6 +239,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
+
 
 export function useAuth() {
   const context = useContext(AuthContext);

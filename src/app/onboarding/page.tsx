@@ -68,6 +68,9 @@ function OnboardingContent() {
     setIsLoading(true);
     try {
       const { error } = await updateProfile({
+        vehicleType: data.vehicle_type,
+        plateNumber: data.license_plate,
+        operatingRadius: data.operating_radius,
         vehicleType: data.vehicleType,
         licensePlate: data.licensePlate,
         operatingRadius: data.operatingRadius,
@@ -95,6 +98,7 @@ function OnboardingContent() {
           </div>
           <CardTitle className="text-2xl">Complete Profile</CardTitle>
           <CardDescription>
+            Hi {profile?.fullName}! Tell us about your setup.
             Hi {profile?.fullName}! Tell us about your setup.
           </CardDescription>
         </CardHeader>
