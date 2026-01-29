@@ -50,9 +50,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
 
     if (!error && data) {
-      setProfile(data as Profile);
+      const mappedProfile: Profile = {
+        ...data,
+        fullName: data.full_name,
+        avatarUrl: data.avatar_url,
+        vehicleType: data.vehicle_type,
+        licensePlate: data.license_plate,
+        operatingRadius: data.operating_radius,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+      setProfile(mappedProfile);
+      return mappedProfile;
     }
-    return data as Profile | null;
+    return null;
   };
 
   useEffect(() => {
@@ -154,9 +165,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return { error: new Error("Not authenticated") };
 
+    // Map camelCase to snake_case for Supabase
+    const supabaseUpdates: any = { ...updates };
+    if (updates.fullName) {
+      supabaseUpdates.full_name = updates.fullName;
+      delete (supabaseUpdates as any).fullName;
+    }
+    if (updates.avatarUrl) {
+      supabaseUpdates.avatar_url = updates.avatarUrl;
+      delete (supabaseUpdates as any).avatarUrl;
+    }
+    if (updates.vehicleType) {
+      supabaseUpdates.vehicle_type = updates.vehicleType;
+      delete (supabaseUpdates as any).vehicleType;
+    }
+    if (updates.licensePlate) {
+      supabaseUpdates.license_plate = updates.licensePlate;
+      delete (supabaseUpdates as any).licensePlate;
+    }
+    if (updates.operatingRadius) {
+      supabaseUpdates.operating_radius = updates.operatingRadius;
+      delete (supabaseUpdates as any).operatingRadius;
+    }
+
     const { error } = await supabase
       .from("profiles")
-      .update(updates)
+      .update(supabaseUpdates)
       .eq("id", user.id);
 
     if (!error) {
