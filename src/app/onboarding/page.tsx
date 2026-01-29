@@ -35,9 +35,9 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { toast } from "sonner";
 
 const onboardingSchema = z.object({
-  vehicleType: z.string().min(1, "Select a vehicle"),
-  licensePlate: z.string().min(2, "Enter license plate"),
-  operatingRadius: z.coerce.number().min(1).max(100),
+  vehicle_type: z.string().min(1, "Select a vehicle"),
+  license_plate: z.string().min(2, "Enter license plate"),
+  operating_radius: z.coerce.number().min(1).max(100),
 });
 
 type OnboardingFormData = z.infer<typeof onboardingSchema>;
@@ -58,9 +58,9 @@ function OnboardingContent() {
   const form = useForm({
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
-      vehicleType: "",
-      licensePlate: "",
-      operatingRadius: 10,
+      vehicle_type: "",
+      license_plate: "",
+      operating_radius: 10,
     },
   });
 
@@ -68,9 +68,9 @@ function OnboardingContent() {
     setIsLoading(true);
     try {
       const { error } = await updateProfile({
-        vehicleType: data.vehicleType,
-        licensePlate: data.licensePlate,
-        operatingRadius: data.operatingRadius,
+        vehicle_type: data.vehicle_type,
+        license_plate: data.license_plate,
+        operating_radius: data.operating_radius,
       });
 
       if (error) {
@@ -95,7 +95,7 @@ function OnboardingContent() {
           </div>
           <CardTitle className="text-2xl">Complete Profile</CardTitle>
           <CardDescription>
-            Hi {profile?.fullName}! Tell us about your setup.
+            Hi {profile?.full_name}! Tell us about your setup.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -103,7 +103,7 @@ function OnboardingContent() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="vehicleType"
+                name="vehicle_type"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Vehicle Type</FormLabel>
@@ -130,7 +130,7 @@ function OnboardingContent() {
               />
               <FormField
                 control={form.control}
-                name="licensePlate"
+                name="license_plate"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>License Plate</FormLabel>
@@ -143,7 +143,7 @@ function OnboardingContent() {
               />
               <FormField
                 control={form.control}
-                name="operatingRadius"
+                name="operating_radius"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Radius (km)</FormLabel>

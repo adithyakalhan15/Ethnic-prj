@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -40,7 +40,7 @@ const signupSchema = z.object({
 
 type SignupFormData = z.infer<typeof signupSchema>;
 
-function SignupForm() {
+export default function SignupPage() {
   const { signUp, user, profile } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -70,7 +70,7 @@ function SignupForm() {
   const onSubmit = async (data: SignupFormData) => {
     setIsLoading(true);
     try {
-      const { error, profile: userProfile } = await signUp(
+      const { error } = await signUp(
         data.email,
         data.password,
         data.fullName,
@@ -78,14 +78,8 @@ function SignupForm() {
       );
       if (error) {
         toast.error(error.message);
-      } else if (userProfile) {
+      } else {
         toast.success("Account created successfully!");
-        // REDIRECT BASED ON ROLE IMMEDIATELY
-        const redirectPath =
-          userProfile.role === "COLLECTOR"
-            ? "/collector/dashboard"
-            : "/seller/dashboard";
-        router.push(redirectPath);
       }
     } catch (error) {
       toast.error("An unexpected error occurred.");
@@ -256,19 +250,5 @@ function SignupForm() {
         </CardFooter>
       </Card>
     </div>
-  );
-}
-
-export default function SignupPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      }
-    >
-      <SignupForm />
-    </Suspense>
   );
 }

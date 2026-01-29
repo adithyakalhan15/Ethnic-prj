@@ -24,11 +24,8 @@ interface AuthContextType {
     password: string,
     fullName: string,
     role: UserRole,
-  ) => Promise<{ error: any; profile: Profile | null }>;
-  signIn: (
-    email: string,
-    password: string,
-  ) => Promise<{ error: any; profile: Profile | null }>;
+  ) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
 }
@@ -45,19 +42,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Initialize Supabase Client
   const supabase = createClient();
 
-  const mapProfile = (data: any): Profile => {
-    return {
-      ...data,
-      fullName: data.full_name ?? data.fullName,
-      avatarUrl: data.avatar_url ?? data.avatarUrl,
-      vehicleType: data.vehicle_type ?? data.vehicleType,
-      licensePlate: data.license_plate ?? data.licensePlate,
-      operatingRadius: data.operating_radius ?? data.operatingRadius,
-      createdAt: data.created_at ?? data.createdAt,
-      updatedAt: data.updated_at ?? data.updatedAt,
-    };
-  };
-
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
       .from("profiles")
@@ -66,54 +50,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
 
     if (!error && data) {
-      const mappedProfile = mapProfile(data);
-      setProfile(mappedProfile);
-      return mappedProfile;
+      setProfile(data as Profile);
     }
-    return null;
+    return data as Profile | null;
   };
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-
+    // Initial Session Check
+    supabase.auth.getSession()
+      .then(({ data: { session }, error }) => {
         if (error) {
           console.warn("Auth session error:", error.message);
-          await supabase.auth.signOut();
+          // If the session is invalid, clear it
+          supabase.auth.signOut();
           setSession(null);
           setUser(null);
           setLoading(false);
           return;
         }
-
         setSession(session);
         setUser(session?.user ?? null);
-
         if (session?.user) {
-          await fetchProfile(session.user.id);
+          fetchProfile(session.user.id);
         }
-      } catch (err) {
-        console.error("Auth initialization failed:", err);
-      } finally {
         setLoading(false);
-      }
-    };
-
-    initAuth();
+      })
+      .catch((err) => {
+        console.error("Auth initialization failed:", err);
+        setLoading(false);
+      });
 
     // Real-time Auth Listener
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        await fetchProfile(session.user.id);
+        // If we have a user but no profile yet, fetch it
+        fetchProfile(session.user.id);
       } else {
         setProfile(null);
       }
@@ -129,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fullName: string,
     role: UserRole,
   ) => {
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -139,27 +115,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       },
     });
-
-    let userProfile = null;
-    if (!error && data.user) {
-      userProfile = await fetchProfile(data.user.id);
-    }
-
-    return { error, profile: userProfile };
+    return { error };
   };
 
+  // --- UPDATED SIGN IN LOGIC ---
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    let userProfile = null;
     if (!error && data.user) {
-      userProfile = await fetchProfile(data.user.id);
+      // 1. Fetch the profile immediately to check the role
+      const userProfile = await fetchProfile(data.user.id);
+
+      // 2. Redirect based on Role
+      if (userProfile) {
+        if (userProfile.role === "COLLECTOR") {
+          router.push("/collector/dashboard");
+        } else {
+          router.push("/seller/dashboard");
+        }
+        router.refresh();
+      }
     }
 
-    return { error, profile: userProfile };
+    return { error };
   };
 
   const signOut = async () => {
@@ -173,32 +154,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return { error: new Error("Not authenticated") };
 
-    // Map camelCase to snake_case for Supabase
-    const supabaseUpdates: any = { ...updates };
-    if (updates.fullName) {
-      supabaseUpdates.full_name = updates.fullName;
-      delete (supabaseUpdates as any).fullName;
-    }
-    if (updates.avatarUrl) {
-      supabaseUpdates.avatar_url = updates.avatarUrl;
-      delete (supabaseUpdates as any).avatarUrl;
-    }
-    if (updates.vehicleType) {
-      supabaseUpdates.vehicle_type = updates.vehicleType;
-      delete (supabaseUpdates as any).vehicleType;
-    }
-    if (updates.licensePlate) {
-      supabaseUpdates.license_plate = updates.licensePlate;
-      delete (supabaseUpdates as any).licensePlate;
-    }
-    if (updates.operatingRadius) {
-      supabaseUpdates.operating_radius = updates.operatingRadius;
-      delete (supabaseUpdates as any).operatingRadius;
-    }
-
     const { error } = await supabase
       .from("profiles")
-      .update(supabaseUpdates)
+      .update(updates)
       .eq("id", user.id);
 
     if (!error) {
@@ -226,7 +184,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
 
 export function useAuth() {
   const context = useContext(AuthContext);
