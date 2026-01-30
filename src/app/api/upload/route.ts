@@ -1,7 +1,5 @@
+import { put } from '@vercel/blob';
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { randomUUID } from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,28 +31,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique filename
-    const extension = file.name.split('.').pop() || 'jpg';
-    const uniqueFilename = `${randomUUID()}.${extension}`;
+    // Upload to Vercel Blob
+    const blob = await put(file.name, file, {
+      access: 'public',
+    });
 
-    // Ensure uploads directory exists
-    const uploadsDir = join(process.cwd(), 'public', 'uploads');
-    await mkdir(uploadsDir, { recursive: true });
-
-    // Save file
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const filePath = join(uploadsDir, uniqueFilename);
-    await writeFile(filePath, buffer);
-
-    // Return the public URL path
-    const imageUrl = `/uploads/${uniqueFilename}`;
-
-    return NextResponse.json({ success: true, imageUrl });
+    // Return the URL in the format the frontend expects
+    return NextResponse.json({ 
+      success: true, 
+      imageUrl: blob.url 
+    });
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json(
-      { error: 'Failed to upload file' },
+      { error: 'Failed to upload file to Vercel Blob' },
       { status: 500 }
     );
   }
