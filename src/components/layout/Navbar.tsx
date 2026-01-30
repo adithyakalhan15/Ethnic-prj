@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Recycle, LogOut, User, Menu, X } from "lucide-react";
+import { Recycle, LogOut, User, Menu, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 
 export function Navbar() {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -38,7 +38,9 @@ export function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden items-center gap-4 md:flex">
-            {user ? (
+            {loading ? (
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            ) : user ? (
               <>
                 <Link href={getDashboardLink()}>
                   <Button variant="ghost">Dashboard</Button>
@@ -84,7 +86,11 @@ export function Navbar() {
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <div className="border-t border-border py-4 md:hidden">
-            {user ? (
+            {loading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : user ? (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2">
                   <User className="h-4 w-4 text-muted-foreground" />

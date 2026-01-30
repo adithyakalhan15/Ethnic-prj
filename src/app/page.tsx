@@ -18,6 +18,7 @@ import {
   Timer,
   Navigation,
   Sparkles,
+  Loader2, // Added Loader2
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -85,18 +86,26 @@ const trustBadges = [
 ];
 
 export default function HomePage() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (user && profile) {
+    if (!loading && user && profile) {
       const redirectPath =
         profile.role === "COLLECTOR"
           ? "/collector/dashboard"
           : "/seller/dashboard";
-      router.push(redirectPath);
+      router.replace(redirectPath);
     }
-  }, [user, profile, router]);
+  }, [user, profile, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <AppLayout>
