@@ -27,19 +27,32 @@ export function ProtectedRoute({
         return;
       }
 
-      // 2. Role Mismatch
-      if (requiredRole && profile?.role !== requiredRole) {
+      // 2. Profile Missing (Authenticated but no profile)
+      // If we have a user but no profile, something is wrong or they are new.
+      // Redirect to onboarding to create/fetch profile if possible, or just stay safe.
+      if (!profile) {
+         if (pathname !== "/onboarding") {
+             router.replace("/onboarding");
+         }
+         return; 
+      }
+
+      // 3. Role Mismatch
+      if (requiredRole && profile.role !== requiredRole) {
         const redirectPath =
-          profile?.role === "COLLECTOR"
+          profile.role === "COLLECTOR"
             ? "/collector/dashboard"
             : "/seller/dashboard";
-        router.replace(redirectPath);
+        
+        if (pathname !== redirectPath) {
+            router.replace(redirectPath);
+        }
         return;
       }
 
-      // 3. Collector Incomplete Profile
+      // 4. Collector Incomplete Profile
       if (
-        profile?.role === "COLLECTOR" &&
+        profile.role === "COLLECTOR" &&
         !profile.vehicleType &&
         pathname !== "/onboarding"
       ) {
@@ -48,7 +61,7 @@ export function ProtectedRoute({
     }
   }, [user, profile, loading, router, pathname, requiredRole]);
 
-  if (loading || !user || (requiredRole && profile?.role !== requiredRole)) {
+  if (loading || !user || (!profile && pathname !== "/onboarding") || (requiredRole && profile?.role !== requiredRole)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
