@@ -85,31 +85,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    const initAuth = async () => {
+    // Helper to process session and fetch profile
+    const handleSession = async (currentSession: Session | null) => {
       try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
+        if (!mounted) return;
+        
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
 
-        if (error) {
-          console.warn("Auth session error:", error.message);
-          // If session error (e.g. refresh token missing), ensure we are signed out
-          if (mounted) {
-             setSession(null);
-             setUser(null);
-             setProfile(null);
-          }
-        } else if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
-
-          if (session?.user) {
-            await fetchProfile(session.user.id);
-          }
+        if (currentSession?.user) {
+          // If we have a user, ensure we fetch the profile
+          await fetchProfile(currentSession.user.id);
+        } else {
+          setProfile(null);
         }
       } catch (err) {
-        console.error("Auth initialization failed:", err);
+        console.error("Error handling session:", err);
       } finally {
         if (mounted) {
           setLoading(false);
@@ -117,26 +108,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    initAuth();
+    // 1. Initial check (catches case where onAuthStateChange doesn't fire immediately)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+       handleSession(session);
+    });
 
+    // 2. Subscription for updates
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-      
-      console.log("Auth state change:", event);
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      if (session?.user) {
-        // We might want to fetch profile only if we don't have it or if it's a new user
-        // But re-fetching ensures freshness.
-        await fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      // onAuthStateChange might fire immediately too, which is fine.
+      // We process it to stay in sync.
+      handleSession(session);
     });
 
     return () => {
@@ -192,12 +175,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Error signing out:", error);
     } finally {
-      // Always clear state and redirect even if Supabase errors
+      // Always clear state and redirect
       setProfile(null);
       setUser(null);
       setSession(null);
-      router.push("/");
-      router.refresh();
+      router.replace("/");
     }
   };
 
