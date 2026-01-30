@@ -100,6 +100,19 @@ export function ListingSheet({
             </div>
           </div>
 
+          {/* Seller Contact Info */}
+          {(listing as any).seller && (
+            <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+              <p className="text-xs font-bold text-blue-900 uppercase tracking-wider mb-2">Seller Contact</p>
+              <p className="text-sm text-blue-800 font-semibold">{(listing as any).seller.fullName}</p>
+              {(listing as any).seller.phone && (
+                <p className="text-sm text-blue-700 mt-1">
+                  📞 <a href={`tel:${(listing as any).seller.phone}`} className="underline hover:text-blue-900">{(listing as any).seller.phone}</a>
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Time Picker */}
           {/* Precise Time Picker */}
           <div className="space-y-4 pt-2">
@@ -124,15 +137,15 @@ export function ListingSheet({
                     selected={date}
                     onSelect={setDate}
                     initialFocus
-                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                   />
                 </PopoverContent>
               </Popover>
 
               <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl p-1 px-3 h-12">
                 <Clock className="h-4 w-4 text-primary" />
-                <input 
-                  type="time" 
+                <input
+                  type="time"
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
                   className="bg-transparent border-none outline-none text-sm font-medium w-full"

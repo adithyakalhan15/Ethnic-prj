@@ -78,6 +78,9 @@ export function CreateListingDialog({ onSuccess }: CreateListingDialogProps) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    // Save form reference before any async operations (e.currentTarget becomes null after await)
+    const form = e.currentTarget;
+
     if (!latitude || !longitude) {
       toast.error("Location coordinates are required.");
       return;
@@ -109,7 +112,8 @@ export function CreateListingDialog({ onSuccess }: CreateListingDialogProps) {
         imageUrl = uploadData.imageUrl;
       }
 
-      const formData = new FormData(e.currentTarget);
+      // Use the saved form reference (not e.currentTarget which is null after async)
+      const formData = new FormData(form);
       formData.set("imageUrl", imageUrl);
       formData.append("latitude", latitude);
       formData.append("longitude", longitude);
@@ -128,6 +132,7 @@ export function CreateListingDialog({ onSuccess }: CreateListingDialogProps) {
         toast.error(result.error || "Failed to create listing");
       }
     } catch (error) {
+      console.error("CreateListingDialog error:", error);
       toast.error("An error occurred while creating the listing.");
     }
     setLoading(false);

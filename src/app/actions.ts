@@ -10,12 +10,22 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 // --- 1. FETCHING ACTIONS ---
 
-// Get ALL Active Items (For Map)
+// Get ALL Active Items (For Map) - includes seller contact info
 export async function getScrapItems() {
   try {
     const items = await prisma.scrapItem.findMany({
       where: { status: 'ACTIVE' },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: {
+        seller: {
+          select: {
+            id: true,
+            fullName: true,
+            phone: true,
+            email: true
+          }
+        }
+      }
     })
     return items
   } catch (error) {
@@ -24,7 +34,7 @@ export async function getScrapItems() {
   }
 }
 
-// Get SELLER'S Items (My Listings)
+// Get SELLER'S Items (My Listings) - includes collector contact info
 export async function getMyListings() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -33,14 +43,24 @@ export async function getMyListings() {
   try {
     return await prisma.scrapItem.findMany({
       where: { sellerId: user.id },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: {
+        collector: {
+          select: {
+            id: true,
+            fullName: true,
+            phone: true,
+            email: true
+          }
+        }
+      }
     })
   } catch (error) {
     return []
   }
 }
 
-// Get COLLECTOR'S Jobs (My Jobs)
+// Get COLLECTOR'S Jobs (My Jobs) - includes seller contact info
 export async function getCollectorJobs() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -49,7 +69,17 @@ export async function getCollectorJobs() {
   try {
     return await prisma.scrapItem.findMany({
       where: { collectorId: user.id },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: {
+        seller: {
+          select: {
+            id: true,
+            fullName: true,
+            phone: true,
+            email: true
+          }
+        }
+      }
     })
   } catch (error) {
     return []
@@ -83,8 +113,9 @@ export async function createScrapItem(formData: FormData) {
     revalidatePath('/seller/dashboard')
     return { success: true }
   } catch (error) {
-    console.error(error)
-    return { success: false, error: "Failed to create" }
+    console.error("createScrapItem error:", error)
+    const errorMessage = error instanceof Error ? error.message : "Failed to create"
+    return { success: false, error: errorMessage }
   }
 }
 

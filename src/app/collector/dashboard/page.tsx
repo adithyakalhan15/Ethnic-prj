@@ -152,9 +152,9 @@ export default function CollectorDashboard() {
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((currentLatitude * Math.PI) / 180) *
-        Math.cos((item.latitude * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.cos((item.latitude * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c;
 
@@ -181,7 +181,7 @@ export default function CollectorDashboard() {
 
   const handleReleasePickup = async (id: string) => {
     if (!confirm("Are you sure you want to release this job? It will be available for others again.")) return;
-    
+
     toast.promise(releasePickup(id), {
       loading: "Releasing job...",
       success: () => {
@@ -194,7 +194,7 @@ export default function CollectorDashboard() {
 
   const handleMarkCollected = async (unitPrice: number, totalAmount: number) => {
     if (!finalizeItem) return;
-    
+
     setIsFinalizing(true);
     toast.promise(markAsCollected(finalizeItem.id, unitPrice, totalAmount), {
       loading: "Finalizing...",
@@ -293,7 +293,7 @@ export default function CollectorDashboard() {
               showGeofence={radiusFilterEnabled}
             />
             </div>
-            
+
             <div className="absolute top-4 right-4 z-10">
               <Popover>
                 <PopoverTrigger asChild>
@@ -304,7 +304,7 @@ export default function CollectorDashboard() {
                 <PopoverContent className="w-80 rounded-3xl p-5 shadow-2xl border-none bg-white/95 backdrop-blur-md" align="end" sideOffset={8}>
                   <div className="space-y-6">
                     {/* ... filters ... */}
-                     <div className="flex items-center gap-2 border-b pb-3">
+                    <div className="flex items-center gap-2 border-b pb-3">
                       <div className="p-2 bg-primary/10 rounded-xl text-primary">
                         <Filter className="h-4 w-4" />
                       </div>
@@ -343,11 +343,10 @@ export default function CollectorDashboard() {
                               <button
                                 key={type}
                                 onClick={() => toggleType(type)}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                                  isSelected 
-                                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-[1.02]" 
+                                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${isSelected
+                                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-[1.02]"
                                     : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-100"
-                                }`}
+                                  }`}
                               >
                                 {config.label}
                               </button>
@@ -384,18 +383,18 @@ export default function CollectorDashboard() {
 
           {/* TAB 3: HISTORY */}
           <TabsContent value="history" className="mt-0 flex-1 overflow-y-auto bg-slate-50 p-4">
-             <div className="container mx-auto max-w-4xl space-y-4">
-               {!loading && completedJobs.length === 0 && (
-                 <EmptyState icon={CheckCircle} title="No History Yet" desc="Completed jobs will appear here." />
-               )}
-               {completedJobs.map((job) => (
-                 <HistoryCard key={job.id} job={job} />
-               ))}
-             </div>
+            <div className="container mx-auto max-w-4xl space-y-4">
+              {!loading && completedJobs.length === 0 && (
+                <EmptyState icon={CheckCircle} title="No History Yet" desc="Completed jobs will appear here." />
+              )}
+              {completedJobs.map((job) => (
+                <HistoryCard key={job.id} job={job} />
+              ))}
+            </div>
           </TabsContent>
         </Tabs>
 
-        <FinalizeCollectionDialog 
+        <FinalizeCollectionDialog
           item={finalizeItem}
           open={!!finalizeItem}
           onOpenChange={(open) => !open && setFinalizeItem(null)}
@@ -409,9 +408,9 @@ export default function CollectorDashboard() {
 
 // --- Helper Components ---
 
-function JobCard({ job, onComplete, onRelease, onNavigate }: { 
-  job: ScrapItem, 
-  onComplete: () => void, 
+function JobCard({ job, onComplete, onRelease, onNavigate }: {
+  job: ScrapItem,
+  onComplete: () => void,
   onRelease: (id: string) => void,
   onNavigate: (lat: number, lng: number) => void
 }) {
@@ -431,10 +430,24 @@ function JobCard({ job, onComplete, onRelease, onNavigate }: {
         <div className="flex-1 p-6 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-start mb-2">
-               <h3 className="text-xl font-bold text-slate-800 tracking-tight">{job.title}</h3>
-               <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest border-primary/20 text-primary">Reserved</Badge>
+              <h3 className="text-xl font-bold text-slate-800 tracking-tight">{job.title}</h3>
+              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest border-primary/20 text-primary">Reserved</Badge>
             </div>
             <p className="text-sm text-slate-500 mb-4 line-clamp-2">{job.address}</p>
+
+            {/* Seller Contact Info */}
+            {(job as any).seller && (
+              <div className="bg-blue-50 p-3 rounded-2xl border border-blue-100 mb-4">
+                <p className="text-[10px] font-bold text-blue-900 uppercase tracking-wider mb-1">Seller Contact</p>
+                <p className="text-sm text-blue-800 font-semibold">{(job as any).seller.fullName}</p>
+                {(job as any).seller.phone && (
+                  <p className="text-xs text-blue-700">
+                    📞 <a href={`tel:${(job as any).seller.phone}`} className="underline">{(job as any).seller.phone}</a>
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 flex flex-col sm:flex-row gap-4 mb-6">
               <div className="flex items-center gap-3">
                 <div className="h-9 w-9 rounded-xl bg-white flex items-center justify-center text-primary shadow-sm">
@@ -462,7 +475,7 @@ function JobCard({ job, onComplete, onRelease, onNavigate }: {
               <CheckCircle className="mr-2 h-4 w-4" /> Finalize Collection
             </Button>
             <Button variant="outline" className="px-5 h-12 rounded-xl" onClick={() => onNavigate(job.latitude, job.longitude)}>
-               <Navigation className="h-5 w-5" />
+              <Navigation className="h-5 w-5" />
             </Button>
             <Button variant="ghost" size="icon" className="h-12 w-12 rounded-xl text-red-500 hover:bg-red-50" title="Release Job" onClick={() => onRelease(job.id)}>
               <XCircle className="h-5 w-5" />
