@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Loader2, MapPin } from "lucide-react";
+import { Plus, Loader2, MapPin, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 interface CreateListingDialogProps {
@@ -31,6 +31,8 @@ export function CreateListingDialog({ onSuccess }: CreateListingDialogProps) {
   const [loading, setLoading] = useState(false);
   const [latitude, setLatitude] = useState<string>("");
   const [longitude, setLongitude] = useState<string>("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const handleOpen = (isOpen: boolean) => {
     setOpen(isOpen);
@@ -75,29 +77,72 @@ export function CreateListingDialog({ onSuccess }: CreateListingDialogProps) {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     if (!latitude || !longitude) {
       toast.error("Location coordinates are required.");
       return;
     }
 
     setLoading(true);
-    const formData = new FormData(e.currentTarget);
-    formData.append("latitude", latitude);
-    formData.append("longitude", longitude);
 
-    const result = await createScrapItem(formData);
+    try {
+      let imageUrl = "";
 
-    if (result.success) {
-      toast.success("Scrap listed successfully!");
-      if (onSuccess) onSuccess();
-      setOpen(false);
-      setLatitude("");
-      setLongitude("");
-    } else {
-      toast.error(result.error || "Failed to create listing");
+      // Upload image if provided
+      if (imageFile) {
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', imageFile);
+
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: uploadFormData,
+        });
+
+        const uploadData = await uploadRes.json();
+
+        if (!uploadRes.ok) {
+          toast.error(uploadData.error || 'Failed to upload image');
+          setLoading(false);
+          return;
+        }
+
+        imageUrl = uploadData.imageUrl;
+      }
+
+      const formData = new FormData(e.currentTarget);
+      formData.set("imageUrl", imageUrl);
+      formData.append("latitude", latitude);
+      formData.append("longitude", longitude);
+
+      const result = await createScrapItem(formData);
+
+      if (result.success) {
+        toast.success("Scrap listed successfully!");
+        if (onSuccess) onSuccess();
+        setOpen(false);
+        setLatitude("");
+        setLongitude("");
+        setImageFile(null);
+        setImagePreview(null);
+      } else {
+        toast.error(result.error || "Failed to create listing");
+      }
+    } catch (error) {
+      toast.error("An error occurred while creating the listing.");
     }
     setLoading(false);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const inputClasses = "bg-slate-50 border-slate-200 focus-visible:ring-primary h-11";
@@ -173,24 +218,48 @@ export function CreateListingDialog({ onSuccess }: CreateListingDialogProps) {
             </div>
           </div>
 
-          {/* Image URL */}
+          {/* Image Upload */}
           <div className="space-y-0.5">
-            <Label htmlFor="imageUrl" className={labelClasses}>Image URL</Label>
-            <Input 
-              id="imageUrl" 
-              name="imageUrl" 
-              placeholder="https://example.com/image.jpg" 
-              className={inputClasses}
-            />
+            <Label htmlFor="image" className={labelClasses}>Upload Image (Optional)</Label>
+            <div className="relative">
+              {imagePreview ? (
+                <div className="relative w-full h-40 rounded-lg overflow-hidden border border-slate-200">
+                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => { setImageFile(null); setImagePreview(null); }}
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <label
+                  htmlFor="image"
+                  className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-primary hover:bg-slate-50 transition-colors"
+                >
+                  <Upload className="h-8 w-8 text-slate-400 mb-2" />
+                  <span className="text-sm text-slate-500">Click to upload image</span>
+                  <span className="text-xs text-slate-400 mt-1">JPEG, PNG, WebP (max 5MB)</span>
+                </label>
+              )}
+              <input
+                id="image"
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+            </div>
           </div>
 
           {/* Address */}
           <div className="space-y-0.5">
             <Label htmlFor="address" className={labelClasses}>Pickup Address</Label>
-            <Input 
-              id="address" 
-              name="address" 
-              placeholder="Enter your address" 
+            <Input
+              id="address"
+              name="address"
+              placeholder="Enter your address"
               required
               className={inputClasses}
             />
@@ -223,9 +292,9 @@ export function CreateListingDialog({ onSuccess }: CreateListingDialogProps) {
           </div>
 
           {/* Use Location Button */}
-          <Button 
-            type="button" 
-            variant="outline" 
+          <Button
+            type="button"
+            variant="outline"
             className="w-full gap-2 rounded-xl h-11 border-slate-200 text-slate-600 hover:bg-slate-50"
             onClick={detectLocation}
           >
@@ -233,9 +302,9 @@ export function CreateListingDialog({ onSuccess }: CreateListingDialogProps) {
           </Button>
 
           {/* Submit Button */}
-          <Button 
-            type="submit" 
-            className="w-full h-12 rounded-xl text-base font-semibold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all mt-4" 
+          <Button
+            type="submit"
+            className="w-full h-12 rounded-xl text-base font-semibold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all mt-4"
             disabled={loading}
           >
             {loading ? (
