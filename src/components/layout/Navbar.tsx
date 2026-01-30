@@ -6,6 +6,17 @@ import { Recycle, LogOut, User, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export function Navbar() {
   const { user, profile, signOut } = useAuth();
@@ -52,9 +63,26 @@ export function Navbar() {
                     {profile?.role}
                   </span>
                 </div>
-                <Button variant="ghost" size="icon" onClick={handleSignOut}>
-                  <LogOut className="h-5 w-5" />
-                </Button>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <LogOut className="h-5 w-5" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Sign out?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to sign out of your account?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleSignOut}>Sign out</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </>
             ) : (
               <>
@@ -100,14 +128,30 @@ export function Navbar() {
                     Dashboard
                   </Button>
                 </Link>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={handleSignOut}
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
-                </Button>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Sign out?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to sign out of your account?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleSignOut}>Sign out</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             ) : (
               <div className="flex flex-col gap-2">
